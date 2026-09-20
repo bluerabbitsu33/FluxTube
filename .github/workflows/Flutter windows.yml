@@ -1,14 +1,14 @@
-name: Build Windows App
+name: Build Windows MSIX
 
 on:
   push:
     branches: [ main, master ]
-    tags: [ 'v*' ]        # 关键：监听 tag 推送，否则 Release 步骤永远不会触发
+    tags: [ 'v*' ]
   pull_request:
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build-msix:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -29,21 +29,33 @@ jobs:
       - name: Build Windows app
         run: flutter build windows --release
 
-      # 新增：先打包成 ZIP
-      - name: Create ZIP
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath windows-build.zip
+      - name: Create MSIX package
+        run: dart run msix:create
 
-      - name: Upload artifact
+      - name: Find MSIX file
+        id: find_msix
+        shell: pwsh
+        run: |
+          $msix = Get-ChildItem -Path . -Filter *.msix -Recurse | Select-Object -First 1
+          if ($msix) {
+            echo "msix_path=$($msix.FullName)" >> $env:GITHUB_OUTPUT
+            echo "Found: $($msix.FullName)"
+          } else {
+            echo "MSIX not found"
+            exit 1
+          }
+
+      - name: Upload MSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
-          path: windows-build.zip
+          name: windows-msix
+          path: ${{ steps.find_msix.outputs.msix_path }}
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: windows-build.zip
+          files: ${{ steps.find_msix.outputs.msix_path }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
