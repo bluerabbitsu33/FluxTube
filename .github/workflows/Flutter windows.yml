@@ -1,0 +1,63 @@
+name: Flutter windows CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  FLUTTER_VERSION: 3.47.1
+
+# 全局依赖缓存、并行多系统运行
+jobs:
+  # 任务1：公共代码检查 + 单元测试
+  test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 配置 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 安装项目依赖
+        run: flutter pub get
+
+      - name: 代码格式规范校验
+        run: dart format --set-exit-if-changed .
+
+      - name: 静态代码分析
+        run: flutter analyze --fatal-infos
+
+      - name: 执行单元测试
+        run: flutter test --coverage
+
+  # 任务5：Windows 桌面端构建
+  build-windows:
+    needs: test-lint
+    runs-on: windows-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: 配置 Flutter Windows
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: 依赖安装
+        run: flutter pub get
+      - name: 编译 Windows 桌面安装包
+        run: flutter build windows --release
+      - name: 压缩 Windows 产物
+        run: Compress-Archive -Path build\windows\x64\release* -DestinationPath Windows-Release.zip
+      - name: 上传 Windows 安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Release-Zip
+          path: Windows-Release.zip
+
