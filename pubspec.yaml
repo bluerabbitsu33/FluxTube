@@ -70,6 +70,7 @@ dev_dependencies:
   freezed: ^2.5.7
   injectable_generator: ^2.6.2
   drift_dev: ^2.22.1
+  msix: ^3.16.13        # 新增
 
 flutter:
 
@@ -100,3 +101,13 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icon/icon.png"
   min_sdk_android: 21
+
+# 文件末尾追加
+msix_config:
+  display_name: Fluxtube
+  publisher_display_name: Fluxtube
+  identity_name: com.fluxtube.fluxtube
+  msix_version: 0.9.3.0        # 注意：必须是 4 段，对应 0.9.3+14
+  logo_path: assets/icon/icon.png
+  capabilities: internetClient, internetClientServer, privateNetworkClientServer
+  install_certificate: false
